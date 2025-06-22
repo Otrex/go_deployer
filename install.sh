@@ -6,9 +6,8 @@ INSTALL_BIN="/usr/local/bin/$APP_NAME"
 GITHUB_REPO="https://raw.githubusercontent.com/Otrex/go_deployer/main"
 TMP_DIR="$(mktemp -d)"
 
-# --- Parse arguments ---
+# --- Parse flags ---
 ENV_FILE=""
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --env)
@@ -23,7 +22,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$ENV_FILE" ]]; then
-  echo "❌ You must provide --env /path/to/.env"
+  echo "❌ Missing --env /path/to/.env"
   exit 1
 fi
 
@@ -31,9 +30,14 @@ fi
 OS=$(uname -s)
 ARCH=$(uname -m)
 
-if [[ "$OS" == "Linux" ]]; then
-    PLATFORM="linux"
-    BINARY_URL="$GITHUB_REPO/build/linux/$APP_NAME"
+if [[ "$OS" == "Linux" && "$ARCH" == "x86_64" ]]; then
+    PLATFORM="linux-amd64"
+    BINARY_URL="$GITHUB_REPO/build/linux-amd64/$APP_NAME"
+    SERVICE_FILE="/etc/systemd/system/$APP_NAME.service"
+    LOG_DIR="/var/log/$APP_NAME"
+elif [[ "$OS" == "Linux" && "$ARCH" == "aarch64" ]]; then
+    PLATFORM="linux-arm64"
+    BINARY_URL="$GITHUB_REPO/build/linux-arm64/$APP_NAME"
     SERVICE_FILE="/etc/systemd/system/$APP_NAME.service"
     LOG_DIR="/var/log/$APP_NAME"
 elif [[ "$OS" == "Darwin" && "$ARCH" == "x86_64" ]]; then
@@ -47,12 +51,12 @@ elif [[ "$OS" == "Darwin" && "$ARCH" == "arm64" ]]; then
     PLIST_NAME="com.example.$APP_NAME.plist"
     PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME"
 else
-    echo "❌ Unsupported OS/architecture: $OS $ARCH"
+    echo "❌ Unsupported platform: $OS $ARCH"
     exit 1
 fi
 
-echo "📦 Detected platform: $PLATFORM"
-echo "⬇️  Downloading binary from $BINARY_URL..."
+echo "📦 Platform: $PLATFORM"
+echo "⬇️  Downloading $BINARY_URL"
 
 # --- Download binary ---
 curl -fsSL "$BINARY_URL" -o "$TMP_DIR/$APP_NAME"
@@ -63,10 +67,8 @@ sudo cp "$TMP_DIR/$APP_NAME" "$INSTALL_BIN"
 sudo chmod +x "$INSTALL_BIN"
 echo "✅ Installed to $INSTALL_BIN"
 
-# --- Setup service ---
-if [[ "$PLATFORM" == "linux" ]]; then
-    echo "🛠️  Configuring systemd service..."
-
+# --- Linux: systemd setup ---
+if [[ "$OS" == "Linux" ]]; then
     sudo mkdir -p "$LOG_DIR"
     sudo touch "$LOG_DIR/$APP_NAME.log" "$LOG_DIR/$APP_NAME.err"
     sudo chmod 666 "$LOG_DIR"/*.log
@@ -90,12 +92,10 @@ EOF
     sudo systemctl daemon-reload
     sudo systemctl enable "$APP_NAME"
     sudo systemctl restart "$APP_NAME"
+    echo "🚀 $APP_NAME is running on Linux via systemd"
 
-    echo "🚀 $APP_NAME is now running in the background via systemd"
-
+# --- macOS: launchd setup ---
 else
-    echo "🛠️  Configuring macOS launchd service..."
-
     mkdir -p "$(dirname "$PLIST_PATH")"
     tee "$PLIST_PATH" > /dev/null <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -127,11 +127,9 @@ EOF
 
     launchctl unload "$PLIST_PATH" 2>/dev/null || true
     launchctl load "$PLIST_PATH"
-
-    echo "🚀 $APP_NAME is now running in the background via launchd"
+    echo "🚀 $APP_NAME is running on macOS via launchd"
 fi
 
 # --- Cleanup ---
 rm -rf "$TMP_DIR"
-
 echo "✅ Installation complete!"
