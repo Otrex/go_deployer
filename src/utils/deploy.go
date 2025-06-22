@@ -21,6 +21,12 @@ func Deploy(app App, stream *StreamManager) {
 				return
 			}
 
+			if err := os.Chmod(scriptPath, 0755); err != nil {
+				log.Printf("Failed to make script executable: %v", err)
+				stream.Broadcast("[error] Could not chmod script: " + err.Error())
+				return
+			}			
+
 			cmd := exec.Command(scriptPath)
 			cmd.Dir = app.LocalPath 
 			cmd.Env = append(os.Environ(),
