@@ -1,0 +1,5 @@
+# TODO
+
+[] (Bug) Fix the embed issue that make the views folder not be part of the build
+[] (Bug) figure out a way to use the serviced and lauchd to persist executing
+[] (Feat) Implement the one-click deploy code

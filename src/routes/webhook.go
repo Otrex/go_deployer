@@ -14,12 +14,8 @@ func Register(router *gin.Engine, apps []utils.App, htmlFS embed.FS) {
 	stream := utils.NewStreamManager()
 
 	router.GET("/", func(c *gin.Context) {
-		content, err := htmlFS.ReadFile("views/index.html") 
-		if err != nil {
-			c.String(500, "Failed to load page: %v", err)
-			return
-		}
-		c.Data(200, "text/html; charset=utf-8", content)
+		content := utils.IndexTemplate
+		c.Data(200, "text/html; charset=utf-8", []byte(content))
 	})
 
 	router.Any("/webhook/:project/:key", func(ctx *gin.Context) {
