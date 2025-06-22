@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.example.deployer-amd64</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/otrex/Projects/personal/go_deployer/./build/mac/deployer</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/otrex/Projects/personal/go_deployer</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/otrex/Projects/personal/go_deployer/./build/mac/deployer.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/otrex/Projects/personal/go_deployer/./build/mac/deployer.err</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+</dict>
+</plist>

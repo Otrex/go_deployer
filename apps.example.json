@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1,
+    "name": "App 1",
+    "repo_url": "This is the first app",
+    "branch": "app1.png",
+    "local_path": "/Users/otrex/Projects/personal/go_deployer/tests/demo_app"
+  }
+]

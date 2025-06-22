@@ -1,0 +1,13 @@
+[Unit]
+Description=deployer Service (Linux)
+After=network.target
+
+[Service]
+ExecStart=/Users/otrex/Projects/personal/go_deployer/./build/linux/deployer
+WorkingDirectory=/Users/otrex/Projects/personal/go_deployer
+Restart=always
+StandardOutput=append:./build/linux/deployer.log
+StandardError=append:./build/linux/deployer.err
+
+[Install]
+WantedBy=multi-user.target
