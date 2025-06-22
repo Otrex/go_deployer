@@ -1,11 +1,15 @@
 package utils
 
-import "os"
+import (
+	"os"
+	"os/user"
+)
 
 type ConfigType struct {
 	Port string
 	DBPath string 
 	ScriptPath string
+	User *user.User
 }
 
 func GetConfig() ConfigType {
@@ -31,5 +35,6 @@ func GetConfig() ConfigType {
 		Port: port,
 		DBPath: dbPath,
 		ScriptPath: scriptPath,
+		User: InstalledUser,
 	}
 }

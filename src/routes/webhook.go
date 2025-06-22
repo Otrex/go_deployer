@@ -28,6 +28,7 @@ func Register(router *gin.Engine, apps []utils.App, htmlFS embed.FS) {
 		}
 		c.JSON(200, gin.H{
 			"apps": appList,
+			"user": utils.InstalledUser,
 		})
 	})
  
@@ -84,9 +85,9 @@ func Register(router *gin.Engine, apps []utils.App, htmlFS embed.FS) {
 					}
 					fmt.Fprintf(c.Writer, "data: %s\n\n", msg)
 					flusher.Flush()
-					// if msg == "[done]" {
-					// 	return
-					// }
+					if msg == "[done]" {
+						return
+					}
 				case <-c.Request.Context().Done():
 					return
 			}

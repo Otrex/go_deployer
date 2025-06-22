@@ -27,7 +27,7 @@ func Deploy(app App, stream *StreamManager) {
 				return
 			}			
 
-			cmd := exec.Command(scriptPath)
+			cmd := exec.Command("sudo", "-u", config.User.Username, scriptPath)
 			cmd.Dir = app.LocalPath 
 			cmd.Env = append(os.Environ(),
 				"DEPLOYER_APP_NAME=" + app.Name,
