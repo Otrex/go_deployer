@@ -5,6 +5,7 @@ APP_NAME="deployer"
 INSTALL_BIN="/usr/local/bin/$APP_NAME"
 GITHUB_REPO="https://raw.githubusercontent.com/Otrex/go_deployer/main"
 TMP_DIR="$(mktemp -d)"
+SUPERVISOR_FLAG="$HOME/.${APP_NAME}_installed_supervisor"
 
 # --- Parse flags ---
 ENV_FILE=""
@@ -33,23 +34,15 @@ ARCH=$(uname -m)
 if [[ "$OS" == "Linux" && "$ARCH" == "x86_64" ]]; then
     PLATFORM="linux-amd64"
     BINARY_URL="$GITHUB_REPO/build/linux-amd64/$APP_NAME"
-    SERVICE_FILE="/etc/systemd/system/$APP_NAME.service"
-    LOG_DIR="/var/log/$APP_NAME"
 elif [[ "$OS" == "Linux" && "$ARCH" == "aarch64" ]]; then
     PLATFORM="linux-arm64"
     BINARY_URL="$GITHUB_REPO/build/linux-arm64/$APP_NAME"
-    SERVICE_FILE="/etc/systemd/system/$APP_NAME.service"
-    LOG_DIR="/var/log/$APP_NAME"
 elif [[ "$OS" == "Darwin" && "$ARCH" == "x86_64" ]]; then
     PLATFORM="mac-amd64"
     BINARY_URL="$GITHUB_REPO/build/mac-amd64/$APP_NAME"
-    PLIST_NAME="com.example.$APP_NAME.plist"
-    PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME"
 elif [[ "$OS" == "Darwin" && "$ARCH" == "arm64" ]]; then
     PLATFORM="mac-arm64"
     BINARY_URL="$GITHUB_REPO/build/mac-arm64/$APP_NAME"
-    PLIST_NAME="com.example.$APP_NAME.plist"
-    PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME"
 else
     echo "❌ Unsupported platform: $OS $ARCH"
     exit 1
@@ -67,69 +60,64 @@ sudo cp "$TMP_DIR/$APP_NAME" "$INSTALL_BIN"
 sudo chmod +x "$INSTALL_BIN"
 echo "✅ Installed to $INSTALL_BIN"
 
-# --- Linux: systemd setup ---
+# --- Install supervisord if needed ---
+function install_supervisor_linux() {
+  if ! command -v supervisord >/dev/null 2>&1; then
+    echo "🔧 Installing supervisord (Linux)..."
+    sudo apt update && sudo apt install -y supervisor
+    echo "installed_by_script=true" > "$SUPERVISOR_FLAG"
+  else
+    echo "✅ supervisord already installed"
+  fi
+}
+
+function install_supervisor_mac() {
+  if ! command -v supervisord >/dev/null 2>&1; then
+    echo "🔧 Installing supervisord (macOS)..."
+    brew install supervisor
+    mkdir -p ~/Library/LaunchAgents
+    echo "installed_by_script=true" > "$SUPERVISOR_FLAG"
+  else
+    echo "✅ supervisord already installed"
+  fi
+}
+
 if [[ "$OS" == "Linux" ]]; then
-    sudo mkdir -p "$LOG_DIR"
-    sudo touch "$LOG_DIR/$APP_NAME.log" "$LOG_DIR/$APP_NAME.err"
-    sudo chmod 666 "$LOG_DIR"/*.log
-
-    sudo tee "$SERVICE_FILE" > /dev/null <<EOF
-[Unit]
-Description=$APP_NAME Service
-After=network.target
-
-[Service]
-ExecStart=$INSTALL_BIN --envFile=$ENV_FILE
-Restart=always
-StandardOutput=append:$LOG_DIR/$APP_NAME.log
-StandardError=append:$LOG_DIR/$APP_NAME.err
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    sudo systemctl daemon-reexec
-    sudo systemctl daemon-reload
-    sudo systemctl enable "$APP_NAME"
-    sudo systemctl restart "$APP_NAME"
-    echo "🚀 $APP_NAME is running on Linux via systemd"
-
-# --- macOS: launchd setup ---
-else
-    mkdir -p "$(dirname "$PLIST_PATH")"
-    tee "$PLIST_PATH" > /dev/null <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
- "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>com.example.$APP_NAME</string>
-
-  <key>ProgramArguments</key>
-  <array>
-    <string>$INSTALL_BIN</string>
-    <string>--envFile=$ENV_FILE</string>
-  </array>
-
-  <key>RunAtLoad</key>
-  <true/>
-  <key>KeepAlive</key>
-  <true/>
-
-  <key>StandardOutPath</key>
-  <string>$HOME/Library/Logs/${APP_NAME}.log</string>
-  <key>StandardErrorPath</key>
-  <string>$HOME/Library/Logs/${APP_NAME}.err</string>
-</dict>
-</plist>
-EOF
-
-    launchctl unload "$PLIST_PATH" 2>/dev/null || true
-    launchctl load "$PLIST_PATH"
-    echo "🚀 $APP_NAME is running on macOS via launchd"
+  install_supervisor_linux
+elif [[ "$OS" == "Darwin" ]]; then
+  install_supervisor_mac
 fi
 
-# --- Cleanup ---
+# --- Supervisor config setup ---
+SUPERVISOR_CONF_DIR="/etc/supervisor/conf.d"
+[ "$OS" = "Darwin" ] && SUPERVISOR_CONF_DIR="/usr/local/etc/supervisor.d"
+
+SUPERVISOR_CONF="$SUPERVISOR_CONF_DIR/$APP_NAME.conf"
+
+echo "🛠️ Writing supervisor config to $SUPERVISOR_CONF"
+
+sudo tee "$SUPERVISOR_CONF" > /dev/null <<EOF
+[program:$APP_NAME]
+command=$INSTALL_BIN --envFile=$ENV_FILE
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/$APP_NAME.err.log
+stdout_logfile=/var/log/$APP_NAME.out.log
+EOF
+
+# --- Start supervisor process ---
+echo "🔄 Reloading supervisord"
+
+if [[ "$OS" == "Linux" ]]; then
+  sudo supervisorctl reread
+  sudo supervisorctl update
+  sudo supervisorctl restart "$APP_NAME"
+elif [[ "$OS" == "Darwin" ]]; then
+  supervisord -c /usr/local/etc/supervisord.ini
+  supervisorctl reread
+  supervisorctl update
+  supervisorctl restart "$APP_NAME"
+fi
+
+echo "🚀 $APP_NAME is now running under supervisord"
 rm -rf "$TMP_DIR"
-echo "✅ Installation complete!"
