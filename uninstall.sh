@@ -9,17 +9,16 @@ ARCH=$(uname -m)
 
 echo "🧼 Uninstalling $APP_NAME..."
 
-# Determine platform and service locations
 if [[ "$OS" == "Linux" ]]; then
     SERVICE_FILE="/etc/systemd/system/$APP_NAME.service"
     LOG_DIR="/var/log/$APP_NAME"
 
-    echo "🔧 Stopping systemd service..."
+    echo "🔧 Stopping and disabling systemd service..."
     sudo systemctl stop "$APP_NAME" || true
     sudo systemctl disable "$APP_NAME" || true
     sudo systemctl daemon-reload
 
-    echo "🗑️  Removing systemd service and logs..."
+    echo "🗑️  Removing service and logs..."
     sudo rm -f "$SERVICE_FILE"
     sudo rm -rf "$LOG_DIR"
 
@@ -31,7 +30,7 @@ elif [[ "$OS" == "Darwin" ]]; then
     echo "🔧 Unloading launch agent..."
     launchctl unload "$PLIST_PATH" 2>/dev/null || true
 
-    echo "🗑️  Removing launchd plist and logs..."
+    echo "🗑️  Removing plist and logs..."
     rm -f "$PLIST_PATH"
     rm -f "$LOG_DIR/$APP_NAME.log" "$LOG_DIR/$APP_NAME.err"
 
@@ -46,4 +45,4 @@ if [[ -f "$INSTALL_BIN" ]]; then
     sudo rm -f "$INSTALL_BIN"
 fi
 
-echo "✅ $APP_NAME fully uninstalled."
+echo "✅ $APP_NAME has been fully uninstalled."
