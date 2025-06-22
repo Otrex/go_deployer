@@ -18,6 +18,20 @@ func Register(router *gin.Engine, apps []utils.App, htmlFS embed.FS) {
 		c.Data(200, "text/html; charset=utf-8", []byte(content))
 	})
 
+	router.GET("/apps", func(c *gin.Context) {
+		appList := make([]gin.H, len(apps))
+		for i, app := range apps {
+			appList[i] = gin.H{
+				"name": app.Name,
+				"id":   app.ID,
+			}
+		}
+		c.JSON(200, gin.H{
+			"apps": appList,
+		})
+	})
+ 
+
 	router.Any("/webhook/:project/:key", func(ctx *gin.Context) {
     project := ctx.Param("project")
 		key, err := strconv.Atoi(ctx.Param("key"))
