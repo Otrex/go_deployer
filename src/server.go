@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//go:embed views/index.html
+//go:embed views/*
 var htmlFS embed.FS
 
 
@@ -23,6 +23,6 @@ func main() {
   router.Use(middlewares.Logger())
   router.Use(gin.Recovery())
 
-  routes.Register(router, apps)
+  routes.Register(router, apps, htmlFS)
   router.Run(":" + config.Port)
 }

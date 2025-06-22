@@ -1,20 +1,20 @@
 package routes
 
 import (
+	"embed"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/Otrex/go_deployer/src/utils"
 	"github.com/gin-gonic/gin"
 )
 
-func Register(router *gin.Engine, apps []utils.App) {
+func Register(router *gin.Engine, apps []utils.App, htmlFS embed.FS) {
 	stream := utils.NewStreamManager()
 
 	router.GET("/", func(c *gin.Context) {
-		content, err := os.ReadFile("src/views/index.html")
+		content, err := htmlFS.ReadFile("views/index.html") 
 		if err != nil {
 			c.String(500, "Failed to load page: %v", err)
 			return
