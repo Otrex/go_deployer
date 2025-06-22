@@ -46,8 +46,8 @@ func Register(router *gin.Engine, apps []utils.App, htmlFS embed.FS) {
     found := false
     for _, app := range apps {
       if app.Name == project && app.ID == key {
-        utils.Deploy(app, stream)
         found = true
+        utils.Deploy(app, stream)
       }
     }
 
