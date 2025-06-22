@@ -1,4 +1,4 @@
-./build/**
+
 .env
 .app.json
 ./tests/demo_app/test*.txt

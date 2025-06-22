@@ -24,5 +24,5 @@ func main() {
   router.Use(gin.Recovery())
 
   routes.Register(router, apps, htmlFS)
-  router.Run(":" + config.Port)
+  router.Run("127.0.0.1:" + config.Port)
 }
