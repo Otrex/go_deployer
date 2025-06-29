@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 )
 
 
@@ -25,17 +26,28 @@ func Deploy(app App, stream *StreamManager) {
 				log.Printf("Failed to make script executable: %v", err)
 				stream.Broadcast("[error] Could not chmod script: " + err.Error())
 				return
-			}			
+			}	
+			
+			var cmd *exec.Cmd
 
-			cmd := exec.Command("sudo", "-u", config.User.Username, scriptPath)
-			cmd.Dir = app.LocalPath 
-			cmd.Env = append(os.Environ(),
+			envVars := []string{
 				"DEPLOYER_APP_NAME=" + app.Name,
 				"DEPLOYER_APP_BRANCH=" + app.Branch,
 				"DEPLOYER_APP_REPO_URL=" + app.RepoURL,
 				"DEPLOYER_APP_ROOT=" + app.LocalPath,
-			)	
+			}
 			
+			if runtime.GOOS == "windows" {
+					cmd = exec.Command(scriptPath)
+					cmd.Env = append(os.Environ(), envVars...)
+			} else {
+					args := append([]string{"-u", config.User.Username, "env"}, envVars...)
+					args = append(args, scriptPath)
+					cmd = exec.Command("sudo", args...)
+			}
+
+			cmd.Dir = app.LocalPath 
+
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
 				log.Printf("Error creating stdout pipe: %v", err)
